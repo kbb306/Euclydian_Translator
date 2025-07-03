@@ -3,3 +3,4 @@ fontTools
 numpy
 alphacodings
 git+https://github.com/CordySmith/PySmaz.git
+striprtf

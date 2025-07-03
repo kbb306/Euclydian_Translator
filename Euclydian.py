@@ -1,7 +1,8 @@
 import numpy
 from PIL import Image, ImageDraw, ImageFont
 import fontTools
-
+from striprtf.striprtf import rtf_to_text
+import re
 class Translator:
     FONT_SIZES = {
         "Title": 24,
@@ -10,6 +11,7 @@ class Translator:
         "Footnote":8
 
     }
+
     def __init__(self,file,text,textfile,font_path):
         self.fonts = {
             style: ImageFont.truetype(font_path, size)
@@ -20,13 +22,11 @@ class Translator:
         self.text = text
         self.img = None
         if self.textfile:
-            self.multiline()
+            self.auto()
         else:
-            self.oneline()
-    def oneline(self):
-        pass
-    
-    def multiline(self):
+            self.manual()
+            
+    def manual(self):
         lines = self.text.split("\n")  # assume lines contain style:text format like "Title:My Title"
         
         # Precompute total height
@@ -51,4 +51,46 @@ class Translator:
         for style, content, width, height in line_data:
             font = self.fonts[style]
             draw.text((10, y), content, font=font)
+            y += height + 10
+
+
+
+    def auto(self):
+        # Load raw RTF content
+        with open(self.textfile, "r", encoding="utf-8") as f:
+            raw_rtf = f.read()
+
+        # Extract lines with font sizes
+        line_entries = re.findall(r"(\\fs\d+)?([^\\]+)", raw_rtf)
+        parsed_lines = []
+
+        for fs_tag, content in line_entries:
+            if not content.strip():
+                continue
+
+            size_pt = 12  # default
+            if fs_tag:
+                size_halfpt = int(re.search(r"\d+", fs_tag).group())
+                size_pt = size_halfpt // 2
+
+            # Map to nearest style
+            style = min(
+                self.FONT_SIZES,
+                key=lambda k: abs(self.FONT_SIZES[k] - size_pt)
+            )
+            font = self.fonts[style]
+            width, height = font.getsize(content.strip())
+            parsed_lines.append((style, content.strip(), width, height))
+
+        # Calculate image size
+        total_height = sum(h + 10 for _, _, _, h in parsed_lines)
+        max_width = max(w for _, _, w, _ in parsed_lines)
+
+        self.img = Image.new("RGBA", (max_width + 20, total_height + 20), (255, 255, 255, 0))
+        draw = ImageDraw.Draw(self.img)
+
+        # Render each line
+        y = 10
+        for style, text, width, height in parsed_lines:
+            draw.text((10, y), text, font=self.fonts[style])
             y += height + 10
