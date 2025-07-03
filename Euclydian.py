@@ -79,8 +79,9 @@ class Translator:
                 key=lambda k: abs(self.FONT_SIZES[k] - size_pt)
             )
             font = self.fonts[style]
+            clean_text = rtf_to_text(content.strip())
             width, height = font.getsize(content.strip())
-            parsed_lines.append((style, content.strip(), width, height))
+            parsed_lines.append((style, clean_text, width, height))
 
         # Calculate image size
         total_height = sum(h + 10 for _, _, _, h in parsed_lines)
