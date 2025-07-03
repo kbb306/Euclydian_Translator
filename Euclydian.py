@@ -52,6 +52,7 @@ class Translator:
             font = self.fonts[style]
             draw.text((10, y), content, font=font)
             y += height + 10
+        self.save_image()
 
 
 
@@ -95,3 +96,10 @@ class Translator:
         for style, text, width, height in parsed_lines:
             draw.text((10, y), text, font=self.fonts[style])
             y += height + 10
+        self.save_image()
+        
+    def save_image(self):
+        if self.img:
+            self.img.save(self.file)
+        else:
+            print("Image not yet rendered. Call render_text() first.")
