@@ -144,7 +144,7 @@ class Translator:
         return content.upper()
 
 
-    def extract_colr_cpal_colors(font_path):
+    def extract_colr_cpal_colors(self,font_path):
         ttf = TTFont(font_path)
         
         if "COLR" not in ttf or "CPAL" not in ttf:
