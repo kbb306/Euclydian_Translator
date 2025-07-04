@@ -1,7 +1,8 @@
 import re
 from striprtf.striprtf import rtf_to_text
 import cairo  # ← pycairo (installed via apt or pip)
-
+import fontTools
+import numpy
 import gi
 gi.require_version("Pango", "1.0")
 gi.require_version("PangoCairo", "1.0")
