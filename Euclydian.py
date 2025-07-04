@@ -41,7 +41,7 @@ class Translator:
         for line in lines:
             style, content = line.split(":", 1)
             font = self.fonts.get(style.strip(), self.fonts["Body"])  # fallback to "Body"
-            width, height = font.getsize(content)
+            width, height = (font.bbox(content)[2]- font.bbox(content)[0],font.bbox(content)[3]-font.bbox(content)[1]) #Use bbox to get width and height.
             line_data.append((style.strip(), content.strip(), width, height))
             total_height += height + 10  # 10 px spacing
 
