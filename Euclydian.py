@@ -89,25 +89,14 @@ class Translator:
         with open(self.textfile, "r", encoding="utf-8") as f:
             raw_rtf = f.read()
 
-        # Extract font size + fragment blocks
-        blocks = re.findall(r"(\\fs\d+)?([^\\]+)", raw_rtf)
+        # Use striprtf to extract plain text
+        plain_text = rtf_to_text(raw_rtf)
 
-        for fs_tag, fragment in blocks:
-            if not fragment.strip():
+        for line in plain_text.splitlines():
+            if not line.strip():
                 continue
-
-            # Clean RTF fragment to plain text
-            plain = rtf_to_text(fragment).strip()
-            if not plain:
-                continue
-
-            size_pt = 12
-            if fs_tag:
-                size_halfpt = int(re.search(r"\d+", fs_tag).group())
-                size_pt = size_halfpt // 2
-
-            style = min(self.FONT_SIZES, key=lambda k: abs(self.FONT_SIZES[k] - size_pt))
-            cleaned = self.clean_text(plain)
+            style = "Body"  # Default for all lines unless parsing font size separately
+            cleaned = self.clean_text(line.strip())
             self.lines.append((style, cleaned))
 
         self.draw_lines()
