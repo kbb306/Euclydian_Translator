@@ -97,13 +97,17 @@ class Translator:
             "footer": "Footnote"
         }
 
-        for tag_name, style in tag_style_map.items():
-            for tag in soup.find_all(tag_name):
-                text = tag.get_text(strip=True)
-                if not text:
-                    continue
-                cleaned = self.clean_text(text)
-                self.lines.append((style, cleaned))
+        for tag in soup.find_all(True):  # all tags, in order
+            tag_name = tag.name.lower()
+            if tag_name not in tag_style_map:
+                continue
+
+            text = tag.get_text(strip=True)
+            if not text:
+                continue
+
+            cleaned = self.clean_text(text)
+            style = tag_style_map[tag_name]
+            self.lines.append((style, cleaned))
 
         self.draw_lines()
-
