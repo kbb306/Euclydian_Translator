@@ -144,35 +144,4 @@ class Translator:
         return content.upper()
 
 
-    def extract_colr_cpal_colors(font_path):
-        ttf = TTFont(font_path)
-        
-        if "COLR" not in ttf or "CPAL" not in ttf:
-            print("Font does not contain COLR/CPAL tables.")
-            return {}
-
-        colr_table = ttf["COLR"]
-        cpal_table = ttf["CPAL"]
-        
-        # Get the first palette (default)
-        palettes = cpal_table.palettes
-        default_palette = palettes[cpal_table.paletteTypes[0]] if cpal_table.paletteTypes else palettes[0]
-
-        glyph_color_map = {}
-
-        # COLR v0 format: look for ColorLayers
-        if hasattr(colr_table, "ColorLayers"):
-            for glyph_name in colr_table.ColorLayers:
-                layers = colr_table.ColorLayers[glyph_name]
-                if layers:
-                    first_layer = layers[0]
-                    color_index = first_layer.colorID
-                    if 0 <= color_index < len(default_palette):
-                        rgba = default_palette[color_index]
-                        glyph_color_map[glyph_name] = rgba
-
-        # Filter to A–Z only
-        return {
-            glyph: rgba for glyph, rgba in glyph_color_map.items()
-            if glyph in [chr(c) for c in range(ord('A'), ord('Z') + 1)]
-        }
+    
