@@ -21,7 +21,7 @@ class Translator:
         self.file = file
         self.text = text
         self.img = None
-        if self.textfile:
+        if self.textfile is not None:
             self.auto()
         else:
             self.manual()
