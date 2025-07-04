@@ -1,147 +1,102 @@
-import numpy
-from PIL import Image, ImageDraw, ImageFont
-import fontTools
-from fontTools.ttLib import TTFont
-from striprtf.striprtf import rtf_to_text
 import re
+from striprtf.striprtf import rtf_to_text
+import gi
+
+# Ensure the necessary GObject introspection versions are loaded
+gi.require_version("Pango", "1.0")
+gi.require_version("PangoCairo", "1.0")
+from gi.repository import Pango, PangoCairo, cairo
+
 class Translator:
     FONT_SIZES = {
         "Title": 24,
-        "Subtitle":16,
-        "Body":12,
-        "Footnote":8
-
+        "Subtitle": 16,
+        "Body": 12,
+        "Footnote": 8
     }
 
-    def __init__(self,file,textfile,font_path):
-        self.fonts = {
-            style: ImageFont.truetype(font_path, size)
-            for style, size in Translator.FONT_SIZES.items()
-        }
+    def __init__(self, output_file, textfile, font_family):
         self.textfile = textfile
-        self.file = file
-        self.font_path = font_path
-        self.fillcolor = self.extract_colr_cpal_colors(self.font_path)
+        self.output_file = output_file
+        self.font_family = font_family
+        self.lines = []
 
-        self.img = None
-        if self.textfile is not None:
+        if self.textfile:
             self.auto()
         else:
             self.manual()
-            
+
+    def clean_text(self, content):
+        if "\\fs" in content or "{\\rtf" in content:
+            content = rtf_to_text(content)
+        content = ''.join(c for c in content if c.isalpha() or c.isspace())
+        content = content.replace(" ", "    ")  # Quadruple space
+        return content.upper()
+
+    def layout_lines(self, width=800, padding=10):
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, 1)
+        context = cairo.Context(surface)
+        layout = PangoCairo.create_layout(context)
+
+        total_height = padding
+        for style, content in self.lines:
+            font_size = self.FONT_SIZES.get(style, self.FONT_SIZES["Body"]) * Pango.SCALE
+            desc = Pango.FontDescription(f"{self.font_family} {font_size // Pango.SCALE}")
+            layout.set_font_description(desc)
+            layout.set_text(content, -1)
+            _, logical = layout.get_pixel_extents()
+            total_height += logical.height + padding
+
+        return width, total_height
+
+    def draw_lines(self):
+        width, height = self.layout_lines()
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+        context = cairo.Context(surface)
+        layout = PangoCairo.create_layout(context)
+
+        y = 10
+        for style, content in self.lines:
+            font_size = self.FONT_SIZES.get(style, self.FONT_SIZES["Body"]) * Pango.SCALE
+            desc = Pango.FontDescription(f"{self.font_family} {font_size // Pango.SCALE}")
+            layout.set_font_description(desc)
+            layout.set_text(content, -1)
+            context.move_to(10, y)
+            PangoCairo.update_layout(context, layout)
+            PangoCairo.show_layout(context, layout)
+            _, logical = layout.get_pixel_extents()
+            y += logical.height + 10
+
+        surface.write_to_png(self.output_file)
+
     def manual(self):
-        lines = []
-        print("Enter your text with formatting data (size:text). Press enter on a blank line when done.")
+        print("Enter your text with formatting (e.g., Title:My Title). Enter a blank line to finish.")
         while True:
             current = input()
-            if not current:
+            if not current.strip():
                 break
-            lines.append(current)
-                
-        # Precompute total height
-        total_height = 0
-        line_data = []
-        for line in lines:
-            style, content = line.split(":", 1)
-            content = self.cleanText(content)
-            font = self.fonts.get(style.strip(), self.fonts["Body"])  # fallback to "Body"
-            width, height = (font.getbbox(content)[2]- font.getbbox(content)[0],font.getbbox(content)[3]-font.getbbox(content)[1]) #Use bbox to get width and height.
-            line_data.append((style.strip(), content, width, height))
-            total_height += height + 10  # 10 px spacing
-
-        # Determine image width (e.g. max line width)
-        max_width = max(width for _, _, width, _ in line_data)
-
-        # Create the image
-        self.img = Image.new("RGBA", (max_width + 20, total_height + 20), (255, 255, 255, 0))
-        draw = ImageDraw.Draw(self.img)
-
-        # Draw each line
-        y = 10
-        for style, content, width, height in line_data:
-            font = self.fonts[style]
-            x = 10
-        for c in content:
-            if c == " ":
-                x += font.getbbox(" ")[2] - font.getbbox(" ")[0]  # space width
+            if ':' not in current:
                 continue
-            color = self.fillcolor.get(c.upper(), (0, 0, 0, 255))
-            draw.text((x, y), c, font=font, fill=color)
-            bbox = font.getbbox(c)
-            x += bbox[2] - bbox[0]  # advance for next character
-            
-        y += height + 10
-        self.save_image()
+            style, content = current.split(":", 1)
+            cleaned = self.clean_text(content.strip())
+            self.lines.append((style.strip(), cleaned))
 
-
+        self.draw_lines()
 
     def auto(self):
-        # Load raw RTF content
         with open(self.textfile, "r", encoding="utf-8") as f:
             raw_rtf = f.read()
 
-        # Extract lines with font sizes
-        line_entries = re.findall(r"(\\fs\d+)?([^\\]+)", raw_rtf)
-        parsed_lines = []
-
-        for fs_tag, content in line_entries:
+        entries = re.findall(r"(\\fs\d+)?([^\\]+)", raw_rtf)
+        for fs_tag, content in entries:
             if not content.strip():
                 continue
-
-            size_pt = 12  # default
+            size_pt = 12
             if fs_tag:
                 size_halfpt = int(re.search(r"\d+", fs_tag).group())
                 size_pt = size_halfpt // 2
+            style = min(self.FONT_SIZES, key=lambda k: abs(self.FONT_SIZES[k] - size_pt))
+            cleaned = self.clean_text(content.strip())
+            self.lines.append((style, cleaned))
 
-            # Map to nearest style
-            style = min(
-                self.FONT_SIZES,
-                key=lambda k: abs(self.FONT_SIZES[k] - size_pt)
-            )
-            content = self.cleanText(content)
-            font = self.fonts[style]
-            width, height = font.getsize(content.strip())
-            parsed_lines.append((style, content, width, height))
-
-        # Calculate image size
-        total_height = sum(h + 10 for _, _, _, h in parsed_lines)
-        max_width = max(w for _, _, w, _ in parsed_lines)
-
-        self.img = Image.new("RGBA", (max_width + 20, total_height + 20), (255, 255, 255, 0))
-        draw = ImageDraw.Draw(self.img)
-
-        # Render each line
-        y = 10
-        for style, text, width, height in parsed_lines:
-            for c in content:
-                if c == " ":
-                    x += font.getbbox(" ")[2] - font.getbbox(" ")[0]  # space width
-                    continue
-                color = self.fillcolor.get(c.upper(), (0, 0, 0, 255))
-                draw.text((x, y), c, font=font, fill=color)
-                bbox = font.getbbox(c)
-                x += bbox[2] - bbox[0]  # advance for next character
-            y += height + 10
-        self.save_image()
-        
-    def save_image(self):
-        if self.img:
-            self.img.save(self.file)
-        else:
-            print("Image not yet rendered. Call auto() or manual() first.")
-
-    def cleanText(self, content):
-        # Detect and clean RTF if needed
-        if "\\fs" in content or "{\\rtf" in content:
-            content = rtf_to_text(content)
-
-        # Keep only alphabet and space characters
-        content = ''.join(c for c in content if c.isalpha() or c.isspace())
-
-        # Expand each space to four spaces
-        content = content.replace(" ", "    ")
-
-        return content.upper()
-
-
-    
+        self.draw_lines()

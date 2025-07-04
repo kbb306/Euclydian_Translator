@@ -1,6 +1,14 @@
-Pillow
+# Core libraries (platform-independent)
 fontTools
 numpy
 alphacodings
+striprtf>=0.0.16
+
+# Compression utility (installed directly from GitHub)
 git+https://github.com/CordySmith/PySmaz.git
-striprtf
+
+# Graphics support via Cairo
+pycairo>=1.23.0
+
+# GObject Introspection (only works via pip on macOS)
+PyGObject; sys_platform == "darwin"
