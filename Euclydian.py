@@ -102,4 +102,4 @@ class Translator:
         if self.img:
             self.img.save(self.file)
         else:
-            print("Image not yet rendered. Call render_text() first.")
+            print("Image not yet rendered. Call auto() or manual() first.")
