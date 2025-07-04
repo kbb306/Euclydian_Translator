@@ -12,14 +12,14 @@ class Translator:
 
     }
 
-    def __init__(self,file,text,textfile,font_path):
+    def __init__(self,file,textfile,font_path):
         self.fonts = {
             style: ImageFont.truetype(font_path, size)
             for style, size in Translator.FONT_SIZES.items()
         }
         self.textfile = textfile
         self.file = file
-        self.text = text
+        
         self.img = None
         if self.textfile is not None:
             self.auto()
@@ -27,8 +27,14 @@ class Translator:
             self.manual()
             
     def manual(self):
-        lines = self.text.split("\n")  # assume lines contain style:text format like "Title:My Title"
-        
+        lines = []
+        print("Enter your text with formatting data (size:text). Press enter on a blank line when done.")
+        while True:
+            current = input()
+            if not current:
+                break
+            lines.append(current)
+                
         # Precompute total height
         total_height = 0
         line_data = []
