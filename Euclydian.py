@@ -1,11 +1,12 @@
 import re
 from striprtf.striprtf import rtf_to_text
-import gi
+import cairo  # ← pycairo (installed via apt or pip)
 
-# Ensure the necessary GObject introspection versions are loaded
+import gi
 gi.require_version("Pango", "1.0")
 gi.require_version("PangoCairo", "1.0")
-from gi.repository import Pango, PangoCairo, cairo
+from gi.repository import Pango, PangoCairo
+
 
 class Translator:
     FONT_SIZES = {
