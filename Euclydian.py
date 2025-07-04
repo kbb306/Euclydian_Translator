@@ -3,6 +3,7 @@ import gi
 import cairo  # ← pycairo (installed via apt or pip)
 import fontTools
 import numpy
+from bs4 import BeautifulSoup
 # Ensure the necessary GObject introspection versions are loaded
 gi.require_version("Pango", "1.0")
 gi.require_version("PangoCairo", "1.0")

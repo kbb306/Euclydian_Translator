@@ -3,7 +3,7 @@ fontTools
 numpy
 alphacodings
 
-
+beautifulsoup4
 
 # Text compression utility from GitHub
 git+https://github.com/CordySmith/PySmaz.git
