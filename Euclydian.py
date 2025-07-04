@@ -87,16 +87,14 @@ class Translator:
 
     def auto(self):
         with open(self.textfile, "r", encoding="utf-8") as f:
-            raw_rtf = f.read()
-
-        # Use striprtf to extract plain text
-        plain_text = rtf_to_text(raw_rtf)
-
-        for line in plain_text.splitlines():
-            if not line.strip():
-                continue
-            style = "Body"  # Default for all lines unless parsing font size separately
-            cleaned = self.clean_text(line.strip())
-            self.lines.append((style, cleaned))
+            for line in f:
+                line = line.strip()
+                if not line or ":" not in line:
+                    continue
+                style, content = line.split(":", 1)
+                style = style.strip()
+                content = content.strip()
+                cleaned = self.clean_text(content)
+                self.lines.append((style, cleaned))
 
         self.draw_lines()
