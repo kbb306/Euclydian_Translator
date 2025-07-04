@@ -42,7 +42,7 @@ class Translator:
             style, content = line.split(":", 1)
             font = self.fonts.get(style.strip(), self.fonts["Body"])  # fallback to "Body"
             width, height = (font.getbbox(content)[2]- font.getbbox(content)[0],font.getbbox(content)[3]-font.getbbox(content)[1]) #Use bbox to get width and height.
-            line_data.append((style.strip(), content.strip(), width, height))
+            line_data.append((style.strip(), self.cleanText(content), width, height))
             total_height += height + 10  # 10 px spacing
 
         # Determine image width (e.g. max line width)
@@ -86,7 +86,7 @@ class Translator:
                 key=lambda k: abs(self.FONT_SIZES[k] - size_pt)
             )
             font = self.fonts[style]
-            clean_text = rtf_to_text(content.strip())
+            clean_text = self.cleanText(content)
             width, height = font.getsize(content.strip())
             parsed_lines.append((style, clean_text, width, height))
 
@@ -109,3 +109,16 @@ class Translator:
             self.img.save(self.file)
         else:
             print("Image not yet rendered. Call auto() or manual() first.")
+
+    def cleanText(self, content):
+        # Detect and clean RTF if needed
+        if "\\fs" in content or "{\\rtf" in content:
+            content = rtf_to_text(content)
+
+        # Keep only alphabet and space characters
+        cleaned = ''.join(c for c in content if c.isalpha() or c.isspace())
+
+        # Expand each space to four spaces
+        cleaned = cleaned.replace(" ", "    ")
+
+        return cleaned.upper()
