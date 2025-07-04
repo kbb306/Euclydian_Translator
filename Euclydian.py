@@ -1,5 +1,4 @@
 import re
-from striprtf.striprtf import rtf_to_text
 import gi
 import cairo  # ← pycairo (installed via apt or pip)
 import fontTools
@@ -29,8 +28,6 @@ class Translator:
             self.manual()
 
     def clean_text(self, content):
-        if "\\fs" in content or "{\\rtf" in content:
-            content = rtf_to_text(content)
         content = ''.join(c for c in content if c.isalpha() or c.isspace())
         content = content.replace(" ", "    ")  # Quadruple space
         return content.upper()

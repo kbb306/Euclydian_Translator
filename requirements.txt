@@ -3,8 +3,7 @@ fontTools
 numpy
 alphacodings
 
-# RTF parsing
-striprtf>=0.0.16
+
 
 # Text compression utility from GitHub
 git+https://github.com/CordySmith/PySmaz.git
