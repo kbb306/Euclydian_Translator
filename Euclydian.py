@@ -85,14 +85,25 @@ class Translator:
 
     def auto(self):
         with open(self.textfile, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or ":" not in line:
+            html = f.read()
+
+        soup = BeautifulSoup(html, "html.parser")
+
+        tag_style_map = {
+            "h1": "Title",
+            "h2": "Subtitle",
+            "p": "Body",
+            "small": "Footnote",
+            "footer": "Footnote"
+        }
+
+        for tag_name, style in tag_style_map.items():
+            for tag in soup.find_all(tag_name):
+                text = tag.get_text(strip=True)
+                if not text:
                     continue
-                style, content = line.split(":", 1)
-                style = style.strip()
-                content = content.strip()
-                cleaned = self.clean_text(content)
+                cleaned = self.clean_text(text)
                 self.lines.append((style, cleaned))
 
         self.draw_lines()
+
