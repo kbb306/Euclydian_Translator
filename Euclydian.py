@@ -40,9 +40,10 @@ class Translator:
         line_data = []
         for line in lines:
             style, content = line.split(":", 1)
+            content = self.cleanText(content)
             font = self.fonts.get(style.strip(), self.fonts["Body"])  # fallback to "Body"
             width, height = (font.getbbox(content)[2]- font.getbbox(content)[0],font.getbbox(content)[3]-font.getbbox(content)[1]) #Use bbox to get width and height.
-            line_data.append((style.strip(), self.cleanText(content), width, height))
+            line_data.append((style.strip(), content, width, height))
             total_height += height + 10  # 10 px spacing
 
         # Determine image width (e.g. max line width)
@@ -85,10 +86,10 @@ class Translator:
                 self.FONT_SIZES,
                 key=lambda k: abs(self.FONT_SIZES[k] - size_pt)
             )
+            content = self.cleanText(content)
             font = self.fonts[style]
-            clean_text = self.cleanText(content)
             width, height = font.getsize(content.strip())
-            parsed_lines.append((style, clean_text, width, height))
+            parsed_lines.append((style, content, width, height))
 
         # Calculate image size
         total_height = sum(h + 10 for _, _, _, h in parsed_lines)
@@ -116,9 +117,9 @@ class Translator:
             content = rtf_to_text(content)
 
         # Keep only alphabet and space characters
-        cleaned = ''.join(c for c in content if c.isalpha() or c.isspace())
+        content = ''.join(c for c in content if c.isalpha() or c.isspace())
 
         # Expand each space to four spaces
-        cleaned = cleaned.replace(" ", "    ")
+        content = content.replace(" ", "    ")
 
-        return cleaned.upper()
+        return content.upper()
