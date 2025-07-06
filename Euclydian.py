@@ -39,7 +39,7 @@ class Translator:
         layout = PangoCairo.create_layout(context)
 
         total_height = padding
-        for style, content in self.lines:
+        for style, content, _ in self.lines:  # <- Note the added `_` for align
             font_size = self.FONT_SIZES.get(style, self.FONT_SIZES["Body"]) * Pango.SCALE
             desc = Pango.FontDescription(f"{self.font_family} {font_size // Pango.SCALE}")
             layout.set_font_description(desc)
@@ -56,18 +56,28 @@ class Translator:
         layout = PangoCairo.create_layout(context)
 
         y = 10
-        for style, content in self.lines:
+        for style, content, align in self.lines:
             font_size = self.FONT_SIZES.get(style, self.FONT_SIZES["Body"]) * Pango.SCALE
             desc = Pango.FontDescription(f"{self.font_family} {font_size // Pango.SCALE}")
             layout.set_font_description(desc)
             layout.set_text(content, -1)
-            context.move_to(10, y)
             PangoCairo.update_layout(context, layout)
-            PangoCairo.show_layout(context, layout)
+
+            # Measure text width
             _, logical = layout.get_pixel_extents()
+            if align == "center":
+                x = (width - logical.width) // 2
+            elif align == "right":
+                x = width - logical.width - 10
+            else:
+                x = 10
+
+            context.move_to(x, y)
+            PangoCairo.show_layout(context, layout)
             y += logical.height + 10
 
         surface.write_to_png(self.output_file)
+
 
     def manual(self):
         print("Enter your text with formatting (e.g., Title:My Title). Enter a blank line to finish.")
@@ -97,13 +107,28 @@ class Translator:
             "footer": "Footnote"
         }
 
-        for tag_name, style in tag_style_map.items():
-            for tag in soup.find_all(tag_name):
-                text = tag.get_text(strip=True)
-                if not text:
-                    continue
-                cleaned = self.clean_text(text)
-                self.lines.append((style, cleaned))
+        for tag in soup.find_all(True):  # preserve document order
+            tag_name = tag.name.lower()
+            if tag_name not in tag_style_map:
+                continue
+
+            # Get alignment from attribute or style
+            align = tag.get("align", "").lower()
+            if not align and tag.has_attr("style"):
+                style = tag["style"]
+                match = re.search(r"text-align\s*:\s*(\w+)", style, re.IGNORECASE)
+                if match:
+                    align = match.group(1).lower()
+
+            if align not in ["center", "right"]:
+                align = "left"
+
+            text = tag.get_text(strip=True)
+            if not text:
+                continue
+
+            cleaned = self.clean_text(text)
+            style = tag_style_map[tag_name]
+            self.lines.append((style, cleaned, align))  # include alignment
 
         self.draw_lines()
-
