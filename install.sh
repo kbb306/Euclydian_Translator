@@ -15,14 +15,4 @@ sudo apt install -y \
     python3-gi \
     python3-gi-cairo
 
-echo "Creating virtual environment..."
-python3 -m venv .venv
 
-echo "Activating virtual environment and installing Python packages..."
-source .venv/bin/activate
-pip install --upgrade pip
-
-echo "Installing Python packages from requirements.txt..."
-pip install -r requirements.txt
-
-echo "✅ All done. Virtual environment ready."
