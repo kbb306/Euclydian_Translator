@@ -39,7 +39,10 @@ class Translator:
         layout = PangoCairo.create_layout(context)
 
         total_height = padding
-        for style, content, _ in self.lines:  # <- Note the added `_` for align
+        for style, content, align in self.lines:
+            if align == "break":
+                total_height += 20
+                continue
             font_size = self.FONT_SIZES.get(style, self.FONT_SIZES["Body"]) * Pango.SCALE
             desc = Pango.FontDescription(f"{self.font_family} {font_size // Pango.SCALE}")
             layout.set_font_description(desc)
@@ -57,13 +60,16 @@ class Translator:
 
         y = 10
         for style, content, align in self.lines:
+            if align == "break":
+                y += 20
+                continue
+
             font_size = self.FONT_SIZES.get(style, self.FONT_SIZES["Body"]) * Pango.SCALE
             desc = Pango.FontDescription(f"{self.font_family} {font_size // Pango.SCALE}")
             layout.set_font_description(desc)
             layout.set_text(content, -1)
             PangoCairo.update_layout(context, layout)
 
-            # Measure text width
             _, logical = layout.get_pixel_extents()
             if align == "center":
                 x = (width - logical.width) // 2
@@ -78,7 +84,6 @@ class Translator:
 
         surface.write_to_png(self.output_file)
 
-
     def manual(self):
         print("Enter your text with formatting (e.g., Title:My Title). Enter a blank line to finish.")
         while True:
@@ -89,7 +94,7 @@ class Translator:
                 continue
             style, content = current.split(":", 1)
             cleaned = self.clean_text(content.strip())
-            self.lines.append((style.strip(), cleaned))
+            self.lines.append((style.strip(), cleaned, "left"))
 
         self.draw_lines()
 
@@ -107,19 +112,24 @@ class Translator:
             "footer": "Footnote"
         }
 
-        for tag in soup.find_all(True):  # preserve document order
+        for tag in soup.body.descendants:
+            if isinstance(tag, str):
+                continue
             tag_name = tag.name.lower()
+
+            if tag_name == "br":
+                self.lines.append(("Body", "", "break"))
+                continue
+
             if tag_name not in tag_style_map:
                 continue
 
-            # Get alignment from attribute or style
             align = tag.get("align", "").lower()
             if not align and tag.has_attr("style"):
-                style = tag["style"]
-                match = re.search(r"text-align\s*:\s*(\w+)", style, re.IGNORECASE)
+                style_attr = tag["style"]
+                match = re.search(r"text-align\s*:\s*(\w+)", style_attr, re.IGNORECASE)
                 if match:
                     align = match.group(1).lower()
-
             if align not in ["center", "right"]:
                 align = "left"
 
@@ -129,6 +139,6 @@ class Translator:
 
             cleaned = self.clean_text(text)
             style = tag_style_map[tag_name]
-            self.lines.append((style, cleaned, align))  # include alignment
+            self.lines.append((style, cleaned, align))
 
         self.draw_lines()
