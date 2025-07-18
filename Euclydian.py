@@ -4,6 +4,8 @@ import cairo  # ← pycairo (installed via apt or pip)
 import fontTools
 import numpy
 from bs4 import BeautifulSoup
+from fontTools.ttLib import TTFont
+from PIL import Image
 # Ensure the necessary GObject introspection versions are loaded
 gi.require_version("Pango", "1.0")
 gi.require_version("PangoCairo", "1.0")
@@ -142,3 +144,45 @@ class Translator:
             self.lines.append((style, cleaned, align))
 
         self.draw_lines()
+
+    def read(self, image_path, font_path):
+        img = Image.open(image_path).convert("RGBA")
+        pixels = img.load()
+        width, height = img.size
+
+        ttf = TTFont(font_path)
+        colr = ttf["COLR"] if "COLR" in ttf else None
+        cpal = ttf["CPAL"] if "CPAL" in ttf else None
+
+        if not colr or not cpal:
+            print("Font does not contain COLR/CPAL tables.")
+            return
+
+        palette = cpal.palettes[0]
+        color_to_glyph = {}
+
+        if hasattr(colr, "ColorLayers"):
+            for glyph, layers in colr.ColorLayers.items():
+                if not layers:
+                    continue
+                color_id = layers[0].colorID
+                if 0 <= color_id < len(palette):
+                    rgba = palette[color_id]
+                    color_to_glyph[(rgba[0], rgba[1], rgba[2], 255)] = glyph
+
+        print("Starting scan for known color blocks...")
+
+        for y in range(height):
+            for x in range(width):
+                pixel = pixels[x, y]
+                if pixel in color_to_glyph:
+                    print(f"Found color {pixel} at ({x},{y}) → glyph '{color_to_glyph[pixel]}'")
+                    # Estimate height of block
+                    y2 = y
+                    while y2 < height and pixels[x, y2] == pixel:
+                        y2 += 1
+                    glyph_height = y2 - y
+                    print(f"Glyph height: {glyph_height}px")
+                    return  # Early return for now
+
+        print("No known color blocks found.")
