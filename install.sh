@@ -55,5 +55,9 @@ from PIL import Image
 print("OK: gi, cairo, PIL(Pillow) imports succeeded")
 PY
 
+echo "Installing font...."
+mkdir -p ~/.local/share/fonts/
+cp Euclydia.ttf ~/.local/share/fonts/
+
 echo "==> Done."
 echo "Activate later with: source ${VENV_DIR}/bin/activate"
