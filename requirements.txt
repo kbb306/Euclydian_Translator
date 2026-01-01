@@ -2,7 +2,7 @@
 fontTools
 numpy
 alphacodings
-
+Pillow>=10.0.0
 beautifulsoup4
 
 # Text compression utility from GitHub
