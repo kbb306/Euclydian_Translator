@@ -114,7 +114,9 @@ class Translator:
             "footer": "Footnote"
         }
 
-        for tag in soup.body.descendants:
+        root = soup.body or soup
+        nodes = getattr(root, "contents", [])
+        for tag in nodes:
             if isinstance(tag, str):
                 continue
             tag_name = tag.name.lower()
